@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -77,10 +77,10 @@ uint32_t pwmOnTime = 0;
 #define TIMCLOCK   90000000
 #define PRESCALAR  90
 
-uint32_t IC_Val1 = 0;
-uint32_t IC_Val2 = 0;
-uint32_t Difference = 0;
-int Is_First_Captured = 0;
+uint32_t icVal1 = 0;
+uint32_t icVal2 = 0;
+uint32_t difference = 0;
+int isFirstCaptured = 0;
 
 /* Measure Frequency */
 float frequency = 0;
@@ -125,37 +125,27 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 #endif
 
 
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
-{
-	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4)  // if the interrupt source is channel1
-	{
-		if (Is_First_Captured==0) // if the first value is not captured
-		{
-			IC_Val1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4); // read the first value
-			Is_First_Captured = 1;  // set the first captured as true
-		}
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
+	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)  {// if the interrupt source is channel1
+		if (isFirstCaptured == 0) { // if the first value is not captured
+			icVal1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); // read the first value
+			isFirstCaptured = 1;  // set the first captured as true
+		} else {  // if the first is already captured
+			icVal2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);  // read second value
 
-		else   // if the first is already captured
-		{
-			IC_Val2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4);  // read second value
-
-			if (IC_Val2 > IC_Val1)
-			{
-				Difference = IC_Val2 - IC_Val1;
-			}
-
-			else if (IC_Val1 > IC_Val2)
-			{
-				Difference = (0xffffffff - IC_Val1) + IC_Val2;
+			if (icVal2 > icVal1) {
+				difference = icVal2 - icVal1;
+			} else if (icVal1 > icVal2) {
+				difference = (0xffffffff - icVal1) + icVal2;
 			}
 
 			float refClock = TIMCLOCK / (PRESCALAR);
 			float mFactor = 1000000 / refClock;
 
-			usWidth = Difference * mFactor;
+			usWidth = difference * mFactor;
 
 			__HAL_TIM_SET_COUNTER(htim, 0);  // reset the counter
-			Is_First_Captured = 0; // set it back to false
+			isFirstCaptured = 0; // set it back to false
 		}
 	}
 }
@@ -201,7 +191,8 @@ int main(void)
   MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
-
+  HAL_TIM_Base_Start_IT(&htim2);
+  HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -228,6 +219,7 @@ int main(void)
 		  pwmOnTime--;
 	  }
 
+	  printf("usWidth = %d", (int)usWidth);
 
 	  // Toggle PB8 - CN1 pin 10.
 	  if (toggle) {
@@ -235,7 +227,7 @@ int main(void)
 	  } else {
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 	  }
-	  delay(10000);
+	  delay(1000);
   }
   /* USER CODE END 3 */
 }
@@ -348,7 +340,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 10000; //4294967295;
+  htim2.Init.Period = 10000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV4;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_IC_Init(&htim2) != HAL_OK)
@@ -365,7 +357,7 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_BOTHEDGE;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
   sConfigIC.ICFilter = 0;
