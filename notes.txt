@@ -1,0 +1,5 @@
+# Pinouts
+PWM/D6 - CN3 - pin7 - PB1 - TIM3_CH4 -> Input capture direct mode (Autoreload register 16 Bit, division by 4, polarity is high)
+PWM/D6 - CN3 - pin6 - PB3 - TIM2_CH2 -> PWM generation CH2 (Autoreload register 32 Bit, division by 4, polarity is high)
+PA11 - CAN_RX (Not connected)
+PA12 - CAN_TX (Not connected)
