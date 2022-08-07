@@ -144,7 +144,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 
 			usWidth = difference * mFactor;
 
-			__HAL_TIM_SET_COUNTER(htim, 0);  // reset the counter
+			// *** SidRay - DO NOT RESET THE COUNTER. ***
+			// Resetting the counter messes up the the base counter and the pwm
+			//__HAL_TIM_SET_COUNTER(htim, 0);  // reset the counter
 			isFirstCaptured = 0; // set it back to false
 		}
 	}
@@ -227,7 +229,7 @@ int main(void)
 	  } else {
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 	  }
-	  delay(1000);
+	  delay(100);
   }
   /* USER CODE END 3 */
 }
