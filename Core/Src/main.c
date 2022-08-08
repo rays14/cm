@@ -70,8 +70,10 @@ static void MX_CAN1_Init(void);
 
 // Counter
 #define MAX_COUNT    1000
+#define SECS(x)      x / 0.01
 #define AVG_DATA_LEN 10
 #define CAN_ADDRESS(designator, value_6_bit) (((uint16_t)designator << 6) | (uint16_t)value_6_bit)
+
 uint16_t canAddresses[] = {
 	CAN_ADDRESS(0xA, 0),
 	CAN_ADDRESS(0xA, 1),
@@ -82,10 +84,11 @@ uint16_t canAddresses[] = {
 	CAN_ADDRESS(0xA, 6),
 	CAN_ADDRESS(0xA, 7)
 };
-
+uint16_t myCANAddress = CAN_ADDRESS(0xA, 0);
 uint32_t counter = MAX_COUNT;
 uint32_t toggle  = 1;
 uint32_t pwmOnTime = 0;
+uint32_t canIdCounter = 0;
 
 #define TIMCLOCK   90000000
 #define PRESCALAR  90
@@ -95,10 +98,10 @@ uint32_t icVal2 = 0;     // Input capture value 2 (falling edge)
 uint32_t difference = 0; // Difference of the two above values
 int isFirstCaptured = 0; // State of edge capture
 
-float frequency             = 0;
+float    frequency          = 0;
 uint32_t usWidth            = 0;
 uint32_t data[AVG_DATA_LEN] = {0,}; // Running average array
-uint32_t avgWidth           = 0;            // Average pulse width
+float    avgWidth           = 0.0f; // Average pulse width
 
 #if 0
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
@@ -136,7 +139,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 }
 #endif
 
-uint32_t avg(uint32_t *data, uint32_t len, uint32_t newValue) {
+float avg(uint32_t *data, uint32_t len, uint32_t newValue) {
 	float    avg = 0;
 	float    sum = 0;
 	uint32_t i   = 0;
@@ -148,9 +151,9 @@ uint32_t avg(uint32_t *data, uint32_t len, uint32_t newValue) {
 	}
 	data[i - 1] = newValue;
 	sum = sum + (float)newValue;
-	avg = (float)sum / len;
+	avg = sum / len;
 
-	return (uint32_t)avg;
+	return avg;
 }
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
@@ -247,13 +250,15 @@ int main(void)
 		  toggle = 1 - toggle;
 	  }
 
-	  // Timer2 channel 3 is pwm generation
+	  // Timer2 channel 3 is pwm generation.
+#if TEST
 	  TIM2->CCR3 = pwmOnTime;
 	  if (toggle) {
 		  pwmOnTime++;
 	  } else {
 		  pwmOnTime--;
 	  }
+#endif
 
 	  printf("usWidth = %d", (int)usWidth);
 
@@ -264,7 +269,71 @@ int main(void)
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 	  }
 	  delay(1000);
-	  //HAL_Delay(100);
+
+	  switch (cmFsm) {
+	  case INIT:			// Initialize
+          canIdCounter = 0;
+          cmFsm = CANID;
+		  break;
+	  case CANID:           // Read PWM and identify myself.
+		  canIdCounter++;
+		  if (canIdCounter > SECS(4)) {
+			  cmFsm = CANVALVECMD;
+
+			  float duty = avgWidth / htim2.Init.Period;
+
+			  if (duty >= 89.0f && duty < 100.0f) {
+				  myCANAddress = canAddresses[0];
+				  TIM2->CCR3 = (uint32_t)(0.8f * (float)htim2.Init.Period);
+			  } else if (duty > 79.0f && duty < 89.0f) {
+				  myCANAddress = canAddresses[1];
+				  TIM2->CCR3 = (uint32_t)(0.7f * (float)htim2.Init.Period);
+			  } else if (duty > 69.0f && duty < 79.0f) {
+				  myCANAddress = canAddresses[2];
+				  TIM2->CCR3 = (uint32_t)(0.6f * (float)htim2.Init.Period);
+			  } else if (duty > 59.0f && duty < 69.0f) {
+				  myCANAddress = canAddresses[3];
+				  TIM2->CCR3 = (uint32_t)(0.5f * (float)htim2.Init.Period);
+			  } else if (duty > 49.0f && duty < 59.0f) {
+				  myCANAddress = canAddresses[4];
+				  TIM2->CCR3 = (uint32_t)(0.4f * (float)htim2.Init.Period);
+			  } else if (duty > 39.0f && duty < 49.0f) {
+				  myCANAddress = canAddresses[5];
+				  TIM2->CCR3 = (uint32_t)(0.3f * (float)htim2.Init.Period);
+			  } else if (duty > 29.0f && duty < 39.0f) {
+				  myCANAddress = canAddresses[6];
+				  TIM2->CCR3 = (uint32_t)(0.2f * (float)htim2.Init.Period);
+			  } else if (duty > 19.0f && duty < 29.0f) {
+				  myCANAddress = canAddresses[7];
+				  TIM2->CCR3 = (uint32_t)(0.1f * (float)htim2.Init.Period);
+			  } else {
+				  cmFsm = INIT;
+				  TIM2->CCR3 = (uint32_t)(0.95f * (float)htim2.Init.Period);
+			  }
+		  }
+		  break;
+	  case CANVALVECMD:     // Read CAN bus valve commands and act upon then.
+          cmFsm = CANPRESSUREREAD;
+		  break;
+	  case CANPRESSUREREAD: // Read pressure.
+          cmFsm = CANHEIGHTREAD;
+		  break;
+	  case CANHEIGHTREAD:   // Read height.
+          cmFsm = TEMPREAD;
+		  break;
+	  case TEMPREAD:        // Read temperature.
+          cmFsm = CANSTATUSREPORT;
+		  break;
+	  case CANSTATUSREPORT:  // Report status.
+		  cmFsm = CANVALVECMD;
+		  break;
+	  default:
+		  break;
+	  }
+
+
+
+	  //HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
