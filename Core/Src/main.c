@@ -69,7 +69,20 @@ static void MX_CAN1_Init(void);
 /* USER CODE BEGIN 0 */
 
 // Counter
-#define MAX_COUNT 1000
+#define MAX_COUNT    1000
+#define AVG_DATA_LEN 10
+#define CAN_ADDRESS(designator, value_6_bit) (((uint16_t)designator << 6) | (uint16_t)value_6_bit)
+uint16_t canAddresses[] = {
+	CAN_ADDRESS(0xA, 0),
+	CAN_ADDRESS(0xA, 1),
+	CAN_ADDRESS(0xA, 2),
+	CAN_ADDRESS(0xA, 3),
+	CAN_ADDRESS(0xA, 4),
+	CAN_ADDRESS(0xA, 5),
+	CAN_ADDRESS(0xA, 6),
+	CAN_ADDRESS(0xA, 7)
+};
+
 uint32_t counter = MAX_COUNT;
 uint32_t toggle  = 1;
 uint32_t pwmOnTime = 0;
@@ -77,16 +90,15 @@ uint32_t pwmOnTime = 0;
 #define TIMCLOCK   90000000
 #define PRESCALAR  90
 
-uint32_t icVal1 = 0;
-uint32_t icVal2 = 0;
-uint32_t difference = 0;
-int isFirstCaptured = 0;
+uint32_t icVal1 = 0;     // Input capture value 1 (rising edge)
+uint32_t icVal2 = 0;     // Input capture value 2 (falling edge)
+uint32_t difference = 0; // Difference of the two above values
+int isFirstCaptured = 0; // State of edge capture
 
-/* Measure Frequency */
-float frequency = 0;
-
-/* Measure Width */
-uint32_t usWidth = 0;
+float frequency             = 0;
+uint32_t usWidth            = 0;
+uint32_t data[AVG_DATA_LEN] = {0,}; // Running average array
+uint32_t avgWidth           = 0;            // Average pulse width
 
 #if 0
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
@@ -124,14 +136,30 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 }
 #endif
 
+uint32_t avg(uint32_t *data, uint32_t len, uint32_t newValue) {
+	float    avg = 0;
+	float    sum = 0;
+	uint32_t i   = 0;
+
+	// Shift all values
+	sum = sum - (float)data[0];
+	for (i = 1; i < len; i++) {
+		data[i - 1] = data[i];
+	}
+	data[i - 1] = newValue;
+	sum = sum + (float)newValue;
+	avg = (float)sum / len;
+
+	return (uint32_t)avg;
+}
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)  {// if the interrupt source is channel1
-		if (isFirstCaptured == 0) { // if the first value is not captured
+	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)  {                // if the interrupt source is channel1
+		if (isFirstCaptured == 0) {                                  // if the first value is not captured
 			icVal1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); // read the first value
-			isFirstCaptured = 1;  // set the first captured as true
-		} else {  // if the first is already captured
-			icVal2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);  // read second value
+			isFirstCaptured = 1;                                     // set the first captured as true
+		} else {                                                     // if the first is already captured
+			icVal2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); // read second value
 
 			if (icVal2 > icVal1) {
 				difference = icVal2 - icVal1;
@@ -140,13 +168,19 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 			}
 
 			float refClock = TIMCLOCK / (PRESCALAR);
-			float mFactor = 1000000 / refClock;
+			float mFactor  = 1000000 / refClock;
 
-			usWidth = difference * mFactor;
+			usWidth  = difference * mFactor;
+			if (usWidth < htim->Init.Period) {                        // Check to make sure we are not getting overflow
+				avgWidth = avg(data, AVG_DATA_LEN, usWidth);
+			}
 
+			// ------------------------------------------------------------------
 			// *** SidRay - DO NOT RESET THE COUNTER. ***
 			// Resetting the counter messes up the the base counter and the pwm
 			//__HAL_TIM_SET_COUNTER(htim, 0);  // reset the counter
+			// ------------------------------------------------------------------
+
 			isFirstCaptured = 0; // set it back to false
 		}
 	}
@@ -199,7 +233,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  pwmOnTime = 5000;
+  pwmOnTime = 2000;
   while (1)
   {
     /* USER CODE END WHILE */
@@ -229,7 +263,8 @@ int main(void)
 	  } else {
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
 	  }
-	  delay(100);
+	  delay(1000);
+	  //HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -340,7 +375,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 0;
+  htim2.Init.Prescaler = 1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 10000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV4;
