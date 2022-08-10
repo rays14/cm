@@ -27,14 +27,14 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 typedef enum cm_state_t {
-	  INIT,            // Init system.
-	  CANID,           // Read PWM and identify myself.
-	  CANVALVECMD,     // Read CAN bus valve commands and act upon then.
-	  CANPRESSUREREAD, // Read pressure.
-	  CANHEIGHTREAD,   // Read height.
-	  TEMPREAD,        // Read temperature.
-	  READADC,         // READ ADC
-	  CANSTATUSREPORT  // Report status.
+      INIT,            // Init system.
+      CANID,           // Read PWM and identify myself.
+      CANVALVECMD,     // Read CAN bus valve commands and act upon then.
+      CANPRESSUREREAD, // Read pressure.
+      CANHEIGHTREAD,   // Read height.
+      TEMPREAD,        // Read temperature.
+      READADC,         // READ ADC
+      CANSTATUSREPORT  // Report status.
 } cm_state_t;
 /* USER CODE END PTD */
 
@@ -79,14 +79,14 @@ static void MX_ADC1_Init(void);
 #define CAN_ADDRESS(designator, value_6_bit) (((uint16_t)designator << 6) | (uint16_t)value_6_bit)
 
 uint16_t canAddresses[] = {
-	CAN_ADDRESS(0xA, 0),
-	CAN_ADDRESS(0xA, 1),
-	CAN_ADDRESS(0xA, 2),
-	CAN_ADDRESS(0xA, 3),
-	CAN_ADDRESS(0xA, 4),
-	CAN_ADDRESS(0xA, 5),
-	CAN_ADDRESS(0xA, 6),
-	CAN_ADDRESS(0xA, 7)
+    CAN_ADDRESS(0xA, 0),
+    CAN_ADDRESS(0xA, 1),
+    CAN_ADDRESS(0xA, 2),
+    CAN_ADDRESS(0xA, 3),
+    CAN_ADDRESS(0xA, 4),
+    CAN_ADDRESS(0xA, 5),
+    CAN_ADDRESS(0xA, 6),
+    CAN_ADDRESS(0xA, 7)
 };
 uint16_t myCANAddress = CAN_ADDRESS(0xA, 0);
 uint32_t counter = MAX_COUNT;
@@ -113,113 +113,113 @@ float adcVoltage[3];
 #if 0
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
-	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4)
-	{
-		if (Is_First_Captured==0) // if the first rising edge is not captured
-		{
-			IC_Val1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4); // read the first value
-			Is_First_Captured = 1;  // set the first captured as true
-		}
+    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4)
+    {
+        if (Is_First_Captured==0) // if the first rising edge is not captured
+        {
+            IC_Val1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4); // read the first value
+            Is_First_Captured = 1;  // set the first captured as true
+        }
 
-		else   // If the first rising edge is captured, now we will capture the second edge
-		{
-			IC_Val2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4);  // read second value
+        else   // If the first rising edge is captured, now we will capture the second edge
+        {
+            IC_Val2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4);  // read second value
 
-			if (IC_Val2 > IC_Val1)
-			{
-				Difference = IC_Val2-IC_Val1;
-			}
+            if (IC_Val2 > IC_Val1)
+            {
+                Difference = IC_Val2-IC_Val1;
+            }
 
-			else if (IC_Val1 > IC_Val2)
-			{
-				Difference = (0xffffffff - IC_Val1) + IC_Val2;
-			}
+            else if (IC_Val1 > IC_Val2)
+            {
+                Difference = (0xffffffff - IC_Val1) + IC_Val2;
+            }
 
-			float refClock = TIMCLOCK/(PRESCALAR);
+            float refClock = TIMCLOCK/(PRESCALAR);
 
-			frequency = refClock/Difference;
+            frequency = refClock/Difference;
 
-			__HAL_TIM_SET_COUNTER(htim, 0);  // reset the counter
-			Is_First_Captured = 0; // set it back to false
-		}
-	}
+            __HAL_TIM_SET_COUNTER(htim, 0);  // reset the counter
+            Is_First_Captured = 0; // set it back to false
+        }
+    }
 }
 #endif
 
 float avg(uint32_t *data, uint32_t len, uint32_t newValue) {
-	float    avg = 0;
-	float    sum = 0;
-	uint32_t i   = 0;
+    float    avg = 0;
+    float    sum = 0;
+    uint32_t i   = 0;
 
-	// Shift all values
-	sum = sum - (float)data[0];
-	for (i = 1; i < len; i++) {
-		data[i - 1] = data[i];
-	}
-	data[i - 1] = newValue;
-	sum = sum + (float)newValue;
-	avg = sum / len;
+    // Shift all values
+    sum = sum - (float)data[0];
+    for (i = 1; i < len; i++) {
+        data[i - 1] = data[i];
+    }
+    data[i - 1] = newValue;
+    sum = sum + (float)newValue;
+    avg = sum / len;
 
-	return avg;
+    return avg;
 }
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-	if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)  {                // if the interrupt source is channel1
-		if (isFirstCaptured == 0) {                                  // if the first value is not captured
-			icVal1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); // read the first value
-			isFirstCaptured = 1;                                     // set the first captured as true
-		} else {                                                     // if the first is already captured
-			icVal2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); // read second value
+    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)  {                // if the interrupt source is channel1
+        if (isFirstCaptured == 0) {                                  // if the first value is not captured
+            icVal1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); // read the first value
+            isFirstCaptured = 1;                                     // set the first captured as true
+        } else {                                                     // if the first is already captured
+            icVal2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); // read second value
 
-			if (icVal2 > icVal1) {
-				difference = icVal2 - icVal1;
-			} else if (icVal1 > icVal2) {
-				difference = (0xffffffff - icVal1) + icVal2;
-			}
+            if (icVal2 > icVal1) {
+                difference = icVal2 - icVal1;
+            } else if (icVal1 > icVal2) {
+                difference = (0xffffffff - icVal1) + icVal2;
+            }
 
-			float refClock = TIMCLOCK / (PRESCALAR);
-			float mFactor  = 1000000 / refClock;
+            float refClock = TIMCLOCK / (PRESCALAR);
+            float mFactor  = 1000000 / refClock;
 
-			usWidth  = difference * mFactor;
-			if (usWidth < htim->Init.Period) {                        // Check to make sure we are not getting overflow
-				avgWidth = avg(data, AVG_DATA_LEN, usWidth);
-			}
+            usWidth  = difference * mFactor;
+            if (usWidth < htim->Init.Period) {                        // Check to make sure we are not getting overflow
+                avgWidth = avg(data, AVG_DATA_LEN, usWidth);
+            }
 
-			// ------------------------------------------------------------------
-			// *** SidRay - DO NOT RESET THE COUNTER. ***
-			// Resetting the counter messes up the the base counter and the pwm
-			//__HAL_TIM_SET_COUNTER(htim, 0);  // reset the counter
-			// ------------------------------------------------------------------
+            // ------------------------------------------------------------------
+            // *** SidRay - DO NOT RESET THE COUNTER. ***
+            // Resetting the counter messes up the the base counter and the pwm
+            //__HAL_TIM_SET_COUNTER(htim, 0);  // reset the counter
+            // ------------------------------------------------------------------
 
-			isFirstCaptured = 0; // set it back to false
-		}
-	}
+            isFirstCaptured = 0; // set it back to false
+        }
+    }
 }
 
 void delay(uint32_t maxDelayAmount) {
-	volatile uint32_t amount = maxDelayAmount;
-	while (amount > 0) {
-		amount--;
-	}
+    volatile uint32_t amount = maxDelayAmount;
+    while (amount > 0) {
+        amount--;
+    }
 }
 
 void channelSelect(int channel) {
-	ADC_ChannelConfTypeDef sConfig = {0};
-	if (channel == 1) {
-		sConfig.Channel = ADC_CHANNEL_4;
-	} else if (channel == 2) {
-		sConfig.Channel = ADC_CHANNEL_13;
-	} else if (channel == 3) {
-		sConfig.Channel = ADC_CHANNEL_14;
-	}
-	sConfig.Rank = ADC_REGULAR_RANK_1;
-	sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
-	sConfig.SingleDiff = ADC_SINGLE_ENDED;
-	sConfig.OffsetNumber = ADC_OFFSET_NONE;
-	sConfig.Offset = 0;
-	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
-		Error_Handler();
-	}
+    ADC_ChannelConfTypeDef sConfig = {0};
+    if (channel == 1) {
+        sConfig.Channel = ADC_CHANNEL_4;
+    } else if (channel == 2) {
+        sConfig.Channel = ADC_CHANNEL_13;
+    } else if (channel == 3) {
+        sConfig.Channel = ADC_CHANNEL_14;
+    }
+    sConfig.Rank = ADC_REGULAR_RANK_1;
+    sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
+    sConfig.SingleDiff = ADC_SINGLE_ENDED;
+    sConfig.OffsetNumber = ADC_OFFSET_NONE;
+    sConfig.Offset = 0;
+    if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
+        Error_Handler();
+    }
 }
 
 /* USER CODE END 0 */
@@ -270,125 +270,125 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-	  // Decrement toggle counter.
-	  counter--;
-	  if (counter == 0) {
-		  counter = MAX_COUNT;
-		  toggle = 1 - toggle;
-	  }
+      // Decrement toggle counter.
+      counter--;
+      if (counter == 0) {
+          counter = MAX_COUNT;
+          toggle = 1 - toggle;
+      }
 
-	  // Timer2 channel 3 is pwm generation.
+      // Timer2 channel 3 is pwm generation.
 #if TEST
-	  TIM2->CCR3 = pwmOnTime;
-	  if (toggle) {
-		  pwmOnTime++;
-	  } else {
-		  pwmOnTime--;
-	  }
+      TIM2->CCR3 = pwmOnTime;
+      if (toggle) {
+          pwmOnTime++;
+      } else {
+          pwmOnTime--;
+      }
 #endif
 
-	  printf("usWidth = %d", (int)usWidth);
+      printf("usWidth = %d", (int)usWidth);
 
-	  // Toggle PB8 - CN1 pin 10.
-	  if (toggle) {
-		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);
-	  } else {
-		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
-	  }
-	  delay(1000);
+      // Toggle PB8 - CN1 pin 10.
+      if (toggle) {
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);
+      } else {
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
+      }
+      delay(1000);
 
-	  switch (cmFsm) {
-	  case INIT:			// Initialize
+      switch (cmFsm) {
+      case INIT:            // Initialize
           canIdCounter = 0;
           cmFsm = CANID;
-		  break;
-	  case CANID:           // Read PWM and identify myself.
-		  canIdCounter++;
-		  if (canIdCounter > SECS(4)) {
-			  cmFsm = CANVALVECMD;
+          break;
+      case CANID:           // Read PWM and identify myself.
+          canIdCounter++;
+          if (canIdCounter > SECS(4)) {
+              cmFsm = CANVALVECMD;
 
-			  float duty = avgWidth / htim2.Init.Period;
+              float duty = avgWidth / htim2.Init.Period;
 
-			  if (duty >= 89.0f && duty < 100.0f) {
-				  myCANAddress = canAddresses[0];
-				  TIM2->CCR3 = (uint32_t)(0.8f * (float)htim2.Init.Period);
-			  } else if (duty > 79.0f && duty < 89.0f) {
-				  myCANAddress = canAddresses[1];
-				  TIM2->CCR3 = (uint32_t)(0.7f * (float)htim2.Init.Period);
-			  } else if (duty > 69.0f && duty < 79.0f) {
-				  myCANAddress = canAddresses[2];
-				  TIM2->CCR3 = (uint32_t)(0.6f * (float)htim2.Init.Period);
-			  } else if (duty > 59.0f && duty < 69.0f) {
-				  myCANAddress = canAddresses[3];
-				  TIM2->CCR3 = (uint32_t)(0.5f * (float)htim2.Init.Period);
-			  } else if (duty > 49.0f && duty < 59.0f) {
-				  myCANAddress = canAddresses[4];
-				  TIM2->CCR3 = (uint32_t)(0.4f * (float)htim2.Init.Period);
-			  } else if (duty > 39.0f && duty < 49.0f) {
-				  myCANAddress = canAddresses[5];
-				  TIM2->CCR3 = (uint32_t)(0.3f * (float)htim2.Init.Period);
-			  } else if (duty > 29.0f && duty < 39.0f) {
-				  myCANAddress = canAddresses[6];
-				  TIM2->CCR3 = (uint32_t)(0.2f * (float)htim2.Init.Period);
-			  } else if (duty > 19.0f && duty < 29.0f) {
-				  myCANAddress = canAddresses[7];
-				  TIM2->CCR3 = (uint32_t)(0.1f * (float)htim2.Init.Period);
-			  } else {
-				  cmFsm = INIT;
-				  TIM2->CCR3 = (uint32_t)(0.95f * (float)htim2.Init.Period);
-			  }
-		  }
+              if (duty >= 89.0f && duty < 100.0f) {
+                  myCANAddress = canAddresses[0];
+                  TIM2->CCR3 = (uint32_t)(0.8f * (float)htim2.Init.Period);
+              } else if (duty > 79.0f && duty < 89.0f) {
+                  myCANAddress = canAddresses[1];
+                  TIM2->CCR3 = (uint32_t)(0.7f * (float)htim2.Init.Period);
+              } else if (duty > 69.0f && duty < 79.0f) {
+                  myCANAddress = canAddresses[2];
+                  TIM2->CCR3 = (uint32_t)(0.6f * (float)htim2.Init.Period);
+              } else if (duty > 59.0f && duty < 69.0f) {
+                  myCANAddress = canAddresses[3];
+                  TIM2->CCR3 = (uint32_t)(0.5f * (float)htim2.Init.Period);
+              } else if (duty > 49.0f && duty < 59.0f) {
+                  myCANAddress = canAddresses[4];
+                  TIM2->CCR3 = (uint32_t)(0.4f * (float)htim2.Init.Period);
+              } else if (duty > 39.0f && duty < 49.0f) {
+                  myCANAddress = canAddresses[5];
+                  TIM2->CCR3 = (uint32_t)(0.3f * (float)htim2.Init.Period);
+              } else if (duty > 29.0f && duty < 39.0f) {
+                  myCANAddress = canAddresses[6];
+                  TIM2->CCR3 = (uint32_t)(0.2f * (float)htim2.Init.Period);
+              } else if (duty > 19.0f && duty < 29.0f) {
+                  myCANAddress = canAddresses[7];
+                  TIM2->CCR3 = (uint32_t)(0.1f * (float)htim2.Init.Period);
+              } else {
+                  cmFsm = INIT;
+                  TIM2->CCR3 = (uint32_t)(0.95f * (float)htim2.Init.Period);
+              }
+          }
 
-		  // IMPORTANT : Jump state for testing only
-		  cmFsm = CANVALVECMD;
-		  break;
-	  case CANVALVECMD:     // Read CAN bus valve commands and act upon then.
+          // IMPORTANT : Jump state for testing only
+          cmFsm = CANVALVECMD;
+          break;
+      case CANVALVECMD:     // Read CAN bus valve commands and act upon then.
           cmFsm = CANPRESSUREREAD;
-		  break;
-	  case CANPRESSUREREAD: // Read pressure.
+          break;
+      case CANPRESSUREREAD: // Read pressure.
           cmFsm = CANHEIGHTREAD;
-		  break;
-	  case CANHEIGHTREAD:   // Read height.
+          break;
+      case CANHEIGHTREAD:   // Read height.
           cmFsm = TEMPREAD;
-		  break;
-	  case TEMPREAD:        // Read temperature.
+          break;
+      case TEMPREAD:        // Read temperature.
           cmFsm = READADC;
-		  break;
-	  case READADC:         // Read ADC.
+          break;
+      case READADC:         // Read ADC.
           cmFsm = CANSTATUSREPORT;
-		  break;
-	  case CANSTATUSREPORT:  // Report status.
-		  channelSelect(1);
-		  HAL_ADC_Start(&hadc1);
-		  HAL_ADC_PollForConversion(&hadc1, 1000);
-		  adcVal[0] = HAL_ADC_GetValue(&hadc1);
-		  HAL_ADC_Stop(&hadc1);
+          break;
+      case CANSTATUSREPORT:  // Report status.
+          channelSelect(1);
+          HAL_ADC_Start(&hadc1);
+          HAL_ADC_PollForConversion(&hadc1, 1000);
+          adcVal[0] = HAL_ADC_GetValue(&hadc1);
+          HAL_ADC_Stop(&hadc1);
 
-		  channelSelect(2);
-		  HAL_ADC_Start(&hadc1);
-		  HAL_ADC_PollForConversion(&hadc1, 1000);
-		  adcVal[1] = HAL_ADC_GetValue(&hadc1);
-		  HAL_ADC_Stop(&hadc1);
+          channelSelect(2);
+          HAL_ADC_Start(&hadc1);
+          HAL_ADC_PollForConversion(&hadc1, 1000);
+          adcVal[1] = HAL_ADC_GetValue(&hadc1);
+          HAL_ADC_Stop(&hadc1);
 
-		  channelSelect(3);
-		  HAL_ADC_Start(&hadc1);
-		  HAL_ADC_PollForConversion(&hadc1, 1000);
-		  adcVal[2] = HAL_ADC_GetValue(&hadc1);
-		  HAL_ADC_Stop(&hadc1);
+          channelSelect(3);
+          HAL_ADC_Start(&hadc1);
+          HAL_ADC_PollForConversion(&hadc1, 1000);
+          adcVal[2] = HAL_ADC_GetValue(&hadc1);
+          HAL_ADC_Stop(&hadc1);
 
-		  adcVoltage[0] = 3.3f * ((float)adcVal[0] / 4095.0f);
-		  adcVoltage[1] = 3.3f * ((float)adcVal[1] / 4095.0f);
-		  adcVoltage[2] = 3.3f * ((float)adcVal[2] / 4095.0f);
+          adcVoltage[0] = 3.3f * ((float)adcVal[0] / 4095.0f);
+          adcVoltage[1] = 3.3f * ((float)adcVal[1] / 4095.0f);
+          adcVoltage[2] = 3.3f * ((float)adcVal[2] / 4095.0f);
 
-		  cmFsm = CANVALVECMD;
-		  break;
-	  default:
-		  break;
-	  }
+          cmFsm = CANVALVECMD;
+          break;
+      default:
+          break;
+      }
 
 
 
-	  //HAL_Delay(10);
+      //HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
