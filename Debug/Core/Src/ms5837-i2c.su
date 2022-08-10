@@ -1,0 +1,4 @@
+../Core/Src/ms5837-i2c.c:40:24:swap_24	32	static
+../Core/Src/ms5837-i2c.c:58:40:MS5837CRC4	32	static
+../Core/Src/ms5837-i2c.c:103:9:MS5837Init	40	static,ignoring_inline_asm
+../Core/Src/ms5837-i2c.c:162:9:MS5837Read	488	static
