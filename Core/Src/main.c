@@ -33,6 +33,7 @@ typedef enum cm_state_t {
 	  CANPRESSUREREAD, // Read pressure.
 	  CANHEIGHTREAD,   // Read height.
 	  TEMPREAD,        // Read temperature.
+	  READADC,         // READ ADC
 	  CANSTATUSREPORT  // Report status.
 } cm_state_t;
 /* USER CODE END PTD */
@@ -47,6 +48,8 @@ typedef enum cm_state_t {
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+
 CAN_HandleTypeDef hcan1;
 
 TIM_HandleTypeDef htim2;
@@ -61,6 +64,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_CAN1_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -102,6 +106,9 @@ float    frequency          = 0;
 uint32_t usWidth            = 0;
 uint32_t data[AVG_DATA_LEN] = {0,}; // Running average array
 float    avgWidth           = 0.0f; // Average pulse width
+
+uint32_t adcVal[3];
+float adcVoltage[3];
 
 #if 0
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
@@ -196,6 +203,25 @@ void delay(uint32_t maxDelayAmount) {
 	}
 }
 
+void channelSelect(int channel) {
+	ADC_ChannelConfTypeDef sConfig = {0};
+	if (channel == 1) {
+		sConfig.Channel = ADC_CHANNEL_4;
+	} else if (channel == 2) {
+		sConfig.Channel = ADC_CHANNEL_13;
+	} else if (channel == 3) {
+		sConfig.Channel = ADC_CHANNEL_14;
+	}
+	sConfig.Rank = ADC_REGULAR_RANK_1;
+	sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
+	sConfig.SingleDiff = ADC_SINGLE_ENDED;
+	sConfig.OffsetNumber = ADC_OFFSET_NONE;
+	sConfig.Offset = 0;
+	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
+		Error_Handler();
+	}
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -228,6 +254,7 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   MX_CAN1_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
   HAL_TIM_Base_Start_IT(&htim2);
@@ -311,6 +338,9 @@ int main(void)
 				  TIM2->CCR3 = (uint32_t)(0.95f * (float)htim2.Init.Period);
 			  }
 		  }
+
+		  // IMPORTANT : Jump state for testing only
+		  cmFsm = CANVALVECMD;
 		  break;
 	  case CANVALVECMD:     // Read CAN bus valve commands and act upon then.
           cmFsm = CANPRESSUREREAD;
@@ -322,9 +352,34 @@ int main(void)
           cmFsm = TEMPREAD;
 		  break;
 	  case TEMPREAD:        // Read temperature.
+          cmFsm = READADC;
+		  break;
+	  case READADC:         // Read ADC.
           cmFsm = CANSTATUSREPORT;
 		  break;
 	  case CANSTATUSREPORT:  // Report status.
+		  channelSelect(1);
+		  HAL_ADC_Start(&hadc1);
+		  HAL_ADC_PollForConversion(&hadc1, 1000);
+		  adcVal[0] = HAL_ADC_GetValue(&hadc1);
+		  HAL_ADC_Stop(&hadc1);
+
+		  channelSelect(2);
+		  HAL_ADC_Start(&hadc1);
+		  HAL_ADC_PollForConversion(&hadc1, 1000);
+		  adcVal[1] = HAL_ADC_GetValue(&hadc1);
+		  HAL_ADC_Stop(&hadc1);
+
+		  channelSelect(3);
+		  HAL_ADC_Start(&hadc1);
+		  HAL_ADC_PollForConversion(&hadc1, 1000);
+		  adcVal[2] = HAL_ADC_GetValue(&hadc1);
+		  HAL_ADC_Stop(&hadc1);
+
+		  adcVoltage[0] = 3.3f * ((float)adcVal[0] / 4095.0f);
+		  adcVoltage[1] = 3.3f * ((float)adcVal[1] / 4095.0f);
+		  adcVoltage[2] = 3.3f * ((float)adcVal[2] / 4095.0f);
+
 		  cmFsm = CANVALVECMD;
 		  break;
 	  default:
@@ -385,6 +440,120 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_MultiModeTypeDef multimode = {0};
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  // Manually copy this from the IOC generated code!!
+
+  // Common config
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.LowPowerAutoWait = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  hadc1.Init.OversamplingMode = DISABLE;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  multimode.Mode = ADC_MODE_INDEPENDENT;
+  if (HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+
+
+#if 0
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.LowPowerAutoWait = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.NbrOfConversion = 3;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  hadc1.Init.OversamplingMode = DISABLE;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure the ADC multi-mode
+  */
+  multimode.Mode = ADC_MODE_INDEPENDENT;
+  if (HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_4;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_640CYCLES_5;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Rank = ADC_REGULAR_RANK_2;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Rank = ADC_REGULAR_RANK_3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+#endif
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -496,6 +665,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
